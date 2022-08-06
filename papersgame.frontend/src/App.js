@@ -10,7 +10,7 @@ const App = () => {
     const startConnection = async () => {
         try {
             const connection = new HubConnectionBuilder()
-                .withUrl("https://localhost:44354/chat")
+                .withUrl("https://localhost:44354/gameHub")
                 .configureLogging(LogLevel.Information)
                 .build();
 

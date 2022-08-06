@@ -1,4 +1,4 @@
-using PapersGame.Backend.Hubs;
+using PapersGame.Backend;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSignalR();
@@ -19,7 +19,7 @@ app.UseRouting();
 app.UseCors();
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapHub<ChatHub>("/chat");
+    endpoints.MapHub<GameHub>("/gameHub");
 });
 
 app.Run();
