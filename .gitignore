@@ -284,3 +284,5 @@ ops/*.retry
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+papersgame.frontend/src/.vscode/settings.json
+papersgame.frontend/package-lock.json

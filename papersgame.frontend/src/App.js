@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
-import SignalRTest from './components/SignalRTest';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { SignalRAPI } from './api/endpointConstants';
+import { store } from './store';
+import SignalRTest from './components/signalR/SignalRTest';
+import { Provider } from 'react-redux';
+import { ClientMainPageContainer } from './components/mainPage/client/clientMainPageContainer';
 
 const App = () => {
     const [connection, setConnection] = useState();
@@ -10,7 +14,7 @@ const App = () => {
     const startConnection = async () => {
         try {
             const connection = new HubConnectionBuilder()
-                .withUrl("https://localhost:44354/gameHub")
+                .withUrl(SignalRAPI.BuildGetConnection)
                 .configureLogging(LogLevel.Information)
                 .build();
 
@@ -35,9 +39,12 @@ const App = () => {
     }
 
     return <div className='app'>
-        <h2>TestSignalR</h2>
-        <hr className='line' />
-        <SignalRTest startConnection={startConnection} closeConnection={closeConnection}/>
+        <Provider store={store}>
+            <ClientMainPageContainer/>
+            <h2>TestSignalR</h2>
+            <hr className='line' />
+            <SignalRTest startConnection={startConnection} closeConnection={closeConnection} />
+        </Provider>
     </div>
 }
 
