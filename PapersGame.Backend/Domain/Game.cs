@@ -4,6 +4,8 @@ namespace PapersGame.Backend.Domain
 {
     public class Game
     {
+        public string Id { get; } = "111";
+
         public string Name { get; }
         public List<Player> Players { get; }
         /// <summary>
@@ -12,21 +14,20 @@ namespace PapersGame.Backend.Domain
         public int PlayersLimit { get; private set; }
         public bool Started { get; private set; }
 
-        public Player Admin { get; private set; }
+        public string AdminConnectionId { get; private set; }
 
         public bool IsReady => Players.Count > 1 && Players.All(p => p.IsReady);
 
-        public Game(string name, int playerLimit, (string name, string connectionId) gameCreator)
+        public Game(string name, int playerLimit, string adminConnectionId)
         {
             if(playerLimit <= 1)
                 throw new ArgumentException("Player count must be greater then 1!");
 
             Name = name;
             PlayersLimit = playerLimit;
+            AdminConnectionId = adminConnectionId;
             Players = new List<Player>();
             Started = false;
-
-            Admin = AddPlayer(gameCreator.name, gameCreator.connectionId);
         }
 
         /// <summary>

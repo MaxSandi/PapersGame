@@ -23,11 +23,11 @@ namespace PapersGame.Backend
             return base.OnConnectedAsync();
         }
 
-        public async Task CreateGame(string userName, string gameName, int playerCount)
+        public async Task CreateGame(string gameName, int playerCount)
         {
             try
             {
-                _gameProvider.CreateGame(gameName, playerCount, userName, Context.ConnectionId);
+                _gameProvider.CreateGame(gameName, playerCount, Context.ConnectionId);
             }
             catch (Exception ae)
             {

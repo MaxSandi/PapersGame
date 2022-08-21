@@ -6,12 +6,12 @@ namespace PapersGame.Backend.Providers
     {
         public Game? Game { get; private set; }
 
-        public void CreateGame(string gameName, int playerCount, string playerName, string connectionId)
+        public void CreateGame(string gameName, int playerCount, string connectionId)
         {
             if (Game is not null)
                 throw new Exception("Game already exist!");
 
-            Game = new Game(gameName, playerCount, (playerName, connectionId));
+            Game = new Game(gameName, playerCount, connectionId);
         }
 
         public void JoinToGame(string playerName, string connectionId)
@@ -52,7 +52,7 @@ namespace PapersGame.Backend.Providers
                 throw new Exception("Game is not ready yet!");
 
             var player = Game.GetPlayer(connectionId);
-            if(player.ConnectionId != Game.Admin.ConnectionId)
+            if(player.ConnectionId != Game.AdminConnectionId)
                 throw new Exception("Only admin can start game!");
 
             Game.Start();
