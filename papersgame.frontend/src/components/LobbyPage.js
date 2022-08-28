@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { Button, Col, Row, Container, Form, ListGroup, ListGroupItem, InputGroup } from "react-bootstrap";
+import { Card } from "react-bootstrap";
 import { useLocation, useParams } from "react-router-dom";
 
 export default function LobbyPage(props) {
@@ -14,6 +15,8 @@ export default function LobbyPage(props) {
     const [characterName, setCharacterName] = useState("");
     const [isPlayerReady, setIsPlayerReady] = useState(false);
 
+    const [isGameStarted, setIsGameStarted] = useState(false);
+
     useEffect(() => {
 
         if (currentGame) {
@@ -23,6 +26,14 @@ export default function LobbyPage(props) {
         connection?.on("RecivePlayersList", p => {
             setPlayers(p);
             console.log("GameHub - RecivePlayersList");
+        });
+
+        connection?.on("IGameStarted", game => {
+
+            setPlayers(game.players);
+            setIsGameStarted(true);
+
+            console.log("GameHub - IGameStarted");
         });
         
     }, [])
@@ -34,6 +45,23 @@ export default function LobbyPage(props) {
                 (player, index) => <ListGroupItem>{player.name} {String(player.isReady)}</ListGroupItem>);
 
         return (<ListGroup>{list}</ListGroup>)
+    }
+
+    const playerBoard = () => {
+        const currentPlayers = players;
+        const list =
+            currentPlayers.map(
+                (player, index) =>
+                    <Col>
+                        <Card>
+                            <Card.Body>
+                                <Card.Title>{player.name}</Card.Title>
+                                <Card.Text>{player.connectionId == connection.connectionId ? " " : player.character}</Card.Text>
+                            </Card.Body>
+                        </Card>
+                    </Col>);
+
+        return (<Row xs={3}>{list}</Row>)
     }
 
     const setPlayerReady = async (characterName) => {
@@ -76,6 +104,17 @@ export default function LobbyPage(props) {
         }
     }
 
+    const startGame = async () => {
+        try {
+
+            await connection.invoke("StartGame");
+            console.log("GameHub - StartGame");
+
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
     return (
         <div>
             {!currentGame
@@ -86,38 +125,47 @@ export default function LobbyPage(props) {
                 :
                 <div>
                     <h3>Game name: {currentGame.name}. Id {currentGame.id}</h3>
-                    <Container>
-                        <Row>
-                            <Col>
-                                <h4>Список игроков:</h4>
-                                {playersList()}
-                            </Col>
-                            <Col>
-                                <InputGroup className="mb-3">
-                                    <Form.Label>Имя персонажа:</Form.Label>
-                                    <Form.Control name="setCharacter" type="text" placeholder=""
-                                        value={characterName} onChange={(event) => setCharacterName(event.target.value)} />
-                                    {
-                                        !isPlayerReady
-                                        ?
-                                        <Button variant="outline-success" className="mt-1"
-                                            onClick={() => setPlayerReady(characterName)}>
-                                            Готов
-                                        </Button>
-                                        :
-                                        <Button variant="success" className="mt-1"
-                                            onClick={() => setPlayerUnready()}>
-                                            Готов
-                                        </Button>
-                                    }
-                                </InputGroup>
-                                <Button className="mt-1" disabled={!canStartGame()}>
-                                    Начать игру
-                                </Button>
-                            </Col>
-                        </Row>
-                    </Container>
-                </div>}
+                    {!isGameStarted
+                        ?
+                        <Container>
+                            <Row>
+                                <Col>
+                                    <h4>Список игроков:</h4>
+                                    {playersList()}
+                                </Col>
+                                <Col>
+                                    <InputGroup className="mb-3">
+                                        <Form.Label>Имя персонажа:</Form.Label>
+                                        <Form.Control name="setCharacter" type="text" placeholder=""
+                                            value={characterName} onChange={(event) => setCharacterName(event.target.value)} />
+                                        {
+                                            !isPlayerReady
+                                                ?
+                                                <Button variant="outline-success" className="mt-1"
+                                                    onClick={() => setPlayerReady(characterName)}>
+                                                    Готов
+                                                </Button>
+                                                :
+                                                <Button variant="success" className="mt-1"
+                                                    onClick={() => setPlayerUnready()}>
+                                                    Готов
+                                                </Button>
+                                        }
+                                    </InputGroup>
+                                    <Button className="mt-1" disabled={!canStartGame()} onClick={() => startGame()}>
+                                        Начать игру
+                                    </Button>
+                                </Col>
+                            </Row>
+                        </Container>
+                        :
+                        <Container>
+                            <h3>Game started!!!</h3>
+                            {playerBoard()}
+                        </Container>
+                    }
+                </div>
+            }
         </div>
     )
 }

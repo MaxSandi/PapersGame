@@ -36,7 +36,7 @@ const App = () => {
         try {
 
             await connection.invoke("CreateGame", gameName, playerCount);
-            console.log("CreateGame");
+            console.log("GameHub - CreateGame");
 
             await joinGame(username);
 
@@ -56,7 +56,7 @@ const App = () => {
             });
 
             await connection.invoke("JoinToGame", username, "111");
-            console.log("JoinToGame");
+            console.log("GameHub - JoinToGame");
 
         } catch (e) {
             console.log(e);

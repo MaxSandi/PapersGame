@@ -75,7 +75,7 @@ namespace PapersGame.Backend.Domain
             foreach (var player in Players)
             {
                 var item = characters.OrderBy(x => Guid.NewGuid()).Where(x => x.Key != player).First();
-                player.SetGuessedCharacter(item.Value);
+                player.SetCharacter(item.Value);
 
                 characters.Remove(item.Key);
             }

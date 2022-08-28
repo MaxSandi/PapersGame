@@ -117,11 +117,18 @@ namespace PapersGame.Backend
             try
             {
                 _gameProvider.StartGame(Context.ConnectionId);
+
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    await Clients.Group(game.Name).SendAsync("IGameStarted", _gameProvider.Game);
+                }
+
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
-                await SendError(client, "SetPlayerUnready: " + ae.Message);
+                await SendError(client, "StartGame: " + ae.Message);
             }
         }
 
