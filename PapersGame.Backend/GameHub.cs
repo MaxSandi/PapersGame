@@ -55,17 +55,21 @@ namespace PapersGame.Backend
             {
                 _gameProvider.JoinToGame(userName, Context.ConnectionId);
 
-                var gameName = _gameProvider.Game.Name;
-                await Groups.AddToGroupAsync(Context.ConnectionId, gameName);
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    var gameName = game.Name;
+                    await Groups.AddToGroupAsync(Context.ConnectionId, gameName);
 
-                await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
-                await Clients.Group(gameName).SendAsync("RecivePlayersList", _gameProvider.Game.Players);
-
+                    await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
+                    await Clients.Group(gameName).SendAsync("RecivePlayersList", game.Players);
+                }
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
                 await SendError(client, "JoinToGame: " + ae.Message);
+                throw;
             }
         }
 
@@ -74,11 +78,18 @@ namespace PapersGame.Backend
             try
             {
                 _gameProvider.SetPlayerReady(Context.ConnectionId, characterName);
+
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if(game is not null)
+                {
+                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                }
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
                 await SendError(client, "SetPlayerReady: " + ae.Message);
+                throw;
             }
         }
 
@@ -87,6 +98,12 @@ namespace PapersGame.Backend
             try
             {
                 _gameProvider.SetPlayerUnready(Context.ConnectionId);
+
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                }
             }
             catch (Exception ae)
             {
@@ -107,5 +124,13 @@ namespace PapersGame.Backend
                 await SendError(client, "SetPlayerUnready: " + ae.Message);
             }
         }
+
+        #region Private methods
+        private Game? GetGameByConnectionId(string connectionId)
+        {
+            //TODO: use connection id to find game
+            return _gameProvider.Game;
+        }
+        #endregion
     }
 }
