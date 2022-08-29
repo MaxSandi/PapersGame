@@ -2,6 +2,7 @@
 import { Button, Col, Row, Container, Form, ListGroup, ListGroupItem, InputGroup } from "react-bootstrap";
 import { Card } from "react-bootstrap";
 import { useLocation, useParams } from "react-router-dom";
+import './LobbyPage.css';
 
 export default function LobbyPage(props) {
 
@@ -133,28 +134,36 @@ export default function LobbyPage(props) {
                                     <h4>Список игроков:</h4>
                                     {playersList()}
                                 </Col>
+
+                                
                                 <Col>
-                                    <InputGroup className="mb-3">
-                                        <Form.Label>Имя персонажа:</Form.Label>
-                                        <Form.Control name="setCharacter" type="text" placeholder=""
-                                            value={characterName} onChange={(event) => setCharacterName(event.target.value)} />
-                                        {
-                                            !isPlayerReady
-                                                ?
-                                                <Button variant="outline-success" className="mt-1"
-                                                    onClick={() => setPlayerReady(characterName)}>
-                                                    Готов
-                                                </Button>
-                                                :
-                                                <Button variant="success" className="mt-1"
-                                                    onClick={() => setPlayerUnready()}>
-                                                    Готов
-                                                </Button>
-                                        }
-                                    </InputGroup>
-                                    <Button className="mt-1" disabled={!canStartGame()} onClick={() => startGame()}>
-                                        Начать игру
-                                    </Button>
+                                    <Row>
+                                        <h2>CHAT!!!</h2>
+                                    </Row>
+                                    <Row className="row-class">
+                                        <InputGroup className="mb-3">
+                                            <Form.Label className="align-middle">Имя персонажа:</Form.Label>
+                                            <Form.Control name="setCharacter" type="text" placeholder=""
+                                                value={characterName} onChange={(event) => setCharacterName(event.target.value)} />
+                                            {
+                                                !isPlayerReady
+                                                    ?
+                                                    <Button variant="outline-success" className="mt-1"
+                                                        onClick={() => setPlayerReady(characterName)}>
+                                                        Готов
+                                                    </Button>
+                                                    :
+                                                    <Button variant="success" className="mt-1"
+                                                        onClick={() => setPlayerUnready()}>
+                                                        Готов
+                                                    </Button>
+                                            }
+                                        </InputGroup>
+                                        <Button className="mt-1" disabled={!canStartGame()} onClick={() => startGame()}>
+                                            Начать игру
+                                        </Button>
+                                    </Row>
+
                                 </Col>
                             </Row>
                         </Container>
