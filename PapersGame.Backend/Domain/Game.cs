@@ -12,7 +12,7 @@ namespace PapersGame.Backend.Domain
         /// Персонажи, загаданные игроками
         /// </summary>
         public int PlayersLimit { get; private set; }
-        public bool Started { get; private set; }
+        public bool IsStarted { get; private set; }
 
         public string AdminConnectionId { get; private set; }
 
@@ -27,7 +27,7 @@ namespace PapersGame.Backend.Domain
             PlayersLimit = playerLimit;
             AdminConnectionId = adminConnectionId;
             Players = new List<Player>();
-            Started = false;
+            IsStarted = false;
         }
 
         /// <summary>
@@ -55,7 +55,12 @@ namespace PapersGame.Backend.Domain
         {
             SetCharacterToPlayers();
 
-            Started = true;
+            IsStarted = true;
+        }
+
+        internal void Stop()
+        {
+            IsStarted = false;
         }
 
         internal Player GetPlayer(string connectionId)

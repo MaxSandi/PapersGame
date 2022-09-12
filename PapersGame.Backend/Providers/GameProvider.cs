@@ -19,6 +19,9 @@ namespace PapersGame.Backend.Providers
             if (Game is null)
                 throw new Exception("Game hasn't been created yet!");
 
+            if (Game.IsStarted)
+                throw new Exception("Can't add player. Game was started!");
+
             Game.AddPlayer(playerName, connectionId);
         }
 
@@ -56,6 +59,19 @@ namespace PapersGame.Backend.Providers
                 throw new Exception("Only admin can start game!");
 
             Game.Start();
+        }
+
+        internal void StopGame(string connectionId)
+        {
+            if (Game is null)
+                throw new Exception("Game hasn't been created yet!");
+
+            var player = Game.GetPlayer(connectionId);
+            if (player.ConnectionId != Game.AdminConnectionId)
+                throw new Exception("Only admin can stop game!");
+
+            Game.Stop();
+            Game = null;//TODO: remove game from list
         }
     }
 }

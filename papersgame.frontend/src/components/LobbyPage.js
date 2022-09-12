@@ -15,14 +15,18 @@ export default function LobbyPage(props) {
 
     const [characterName, setCharacterName] = useState("");
     const [isPlayerReady, setIsPlayerReady] = useState(false);
-
-    const [isGameStarted, setIsGameStarted] = useState(false);
+    const [isPlayerAdmin, setIsPlayerAdmin] = useState(false);
+    const [lobbyStatus, setLobbyStatus] = useState('preparing');
 
     useEffect(() => {
 
         if (currentGame) {
             setPlayers(currentGame.players);
         }
+
+        //TODO: get lobby status
+
+        connection?.invoke("CheckPlayerIsAdmin").then((res) => { setIsPlayerAdmin(res); });
 
         connection?.on("RecivePlayersList", p => {
             setPlayers(p);
@@ -32,9 +36,17 @@ export default function LobbyPage(props) {
         connection?.on("IGameStarted", game => {
 
             setPlayers(game.players);
-            setIsGameStarted(true);
+
+            setLobbyStatus('running');
 
             console.log("GameHub - IGameStarted");
+        });
+
+        connection?.on("IGameStopped", _ => {
+
+            setLobbyStatus('complete');
+
+            console.log("GameHub - IGameStopped");
         });
         
     }, [])
@@ -116,6 +128,17 @@ export default function LobbyPage(props) {
         }
     }
 
+    const stopGame = async () => {
+        try {
+
+            await connection.invoke("StopGame");
+            console.log("GameHub - StopGame");
+
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
     return (
         <div>
             {!currentGame
@@ -126,52 +149,72 @@ export default function LobbyPage(props) {
                 :
                 <div>
                     <h3>Game name: {currentGame.name}. Id {currentGame.id}</h3>
-                    {!isGameStarted
-                        ?
-                        <Container>
-                            <Row>
-                                <Col>
-                                    <h4>Список игроков:</h4>
-                                    {playersList()}
-                                </Col>
-
-                                
-                                <Col>
+                    {
+                        {
+                            'preparing':
+                                <Container fluid >
                                     <Row>
-                                        <h2>CHAT!!!</h2>
-                                    </Row>
-                                    <Row className="row-class">
-                                        <InputGroup className="mb-3">
-                                            <Form.Label className="align-middle">Имя персонажа:</Form.Label>
-                                            <Form.Control name="setCharacter" type="text" placeholder=""
-                                                value={characterName} onChange={(event) => setCharacterName(event.target.value)} />
-                                            {
-                                                !isPlayerReady
+                                        <Col>
+                                            <h4>Список игроков:</h4>
+                                            {playersList()}
+                                        </Col>
+
+                                        <Col>
+                                            {isPlayerAdmin
+                                                ?
+                                                <Row>
+                                                    <Button variant="danger" className="ml-1"
+                                                        onClick={() => stopGame()}>
+                                                        Завершить игру
+                                                    </Button>
+                                                </Row>
+                                                :
+                                                <div />
+                                            }
+
+                                            <Row>
+                                                <h2>CHAT!!!</h2>
+                                            </Row>
+                                            <Row className="bottom-aligment">
+                                                <InputGroup className="mb-3">
+                                                    <Form.Label className="mr-3 mt-1">Имя персонажа:</Form.Label>
+                                                    <Form.Control name="setCharacter" type="text" placeholder=""
+                                                        value={characterName} onChange={(event) => setCharacterName(event.target.value)} />
+                                                    {
+                                                        !isPlayerReady
+                                                            ?
+                                                            <Button variant="outline-success" className="ml-1"
+                                                                onClick={() => setPlayerReady(characterName)}>
+                                                                Готов
+                                                            </Button>
+                                                            :
+                                                            <Button variant="success" className="ml-1"
+                                                                onClick={() => setPlayerUnready()}>
+                                                                Готов
+                                                            </Button>
+                                                    }
+                                                </InputGroup>
+                                                {isPlayerAdmin
                                                     ?
-                                                    <Button variant="outline-success" className="mt-1"
-                                                        onClick={() => setPlayerReady(characterName)}>
-                                                        Готов
+                                                    <Button className="mt-1" disabled={!canStartGame()} onClick={() => startGame()}>
+                                                        Начать игру
                                                     </Button>
                                                     :
-                                                    <Button variant="success" className="mt-1"
-                                                        onClick={() => setPlayerUnready()}>
-                                                        Готов
-                                                    </Button>
-                                            }
-                                        </InputGroup>
-                                        <Button className="mt-1" disabled={!canStartGame()} onClick={() => startGame()}>
-                                            Начать игру
-                                        </Button>
-                                    </Row>
+                                                    <div />
+                                                }
+                                            </Row>
 
-                                </Col>
-                            </Row>
-                        </Container>
-                        :
-                        <Container>
-                            <h3>Game started!!!</h3>
-                            {playerBoard()}
-                        </Container>
+                                        </Col>
+
+                                    </Row>
+                                </Container>,
+                            'running':
+                                <Container fluid>
+                                    {playerBoard()}
+                                </Container>,
+                            'complete':
+                                <h3>Game has been completed!</h3>
+                        }[lobbyStatus]
                     }
                 </div>
             }

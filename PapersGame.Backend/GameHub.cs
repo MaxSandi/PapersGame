@@ -132,6 +132,45 @@ namespace PapersGame.Backend
             }
         }
 
+        public async Task StopGame()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    var group = Clients.Group(game.Name);
+                    _gameProvider.StopGame(Context.ConnectionId);
+
+                    await group.SendAsync("IGameStopped");
+                }
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "StartGame: " + ae.Message);
+            }
+        }
+
+        public async Task<bool> CheckPlayerIsAdmin()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is null)
+                    throw new Exception();
+
+                return Context.ConnectionId == game.AdminConnectionId;
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "CheckPlayerIsAdmin: " + ae.Message);
+            }
+
+            return false;
+        }
+
         #region Private methods
         private Game? GetGameByConnectionId(string connectionId)
         {
