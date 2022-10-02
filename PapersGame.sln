@@ -7,6 +7,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PapersGame.Backend", "Paper
 EndProject
 Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "PapersGame.Frontend", "PapersGame.Frontend\PapersGame.Frontend.esproj", "{97E0DA96-AE7F-4BEF-90C9-0DA83E994035}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0D08E68C-9BEB-475A-B516-969089C9DDB1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PapersGame.Backend.Tests", "PapersGame.Backend.Tests\PapersGame.Backend.Tests.csproj", "{FDDCF0FD-634A-4C9E-966F-2D272C61BB58}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,9 +27,16 @@ Global
 		{97E0DA96-AE7F-4BEF-90C9-0DA83E994035}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{97E0DA96-AE7F-4BEF-90C9-0DA83E994035}.Release|Any CPU.Build.0 = Release|Any CPU
 		{97E0DA96-AE7F-4BEF-90C9-0DA83E994035}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{FDDCF0FD-634A-4C9E-966F-2D272C61BB58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FDDCF0FD-634A-4C9E-966F-2D272C61BB58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FDDCF0FD-634A-4C9E-966F-2D272C61BB58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FDDCF0FD-634A-4C9E-966F-2D272C61BB58}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FDDCF0FD-634A-4C9E-966F-2D272C61BB58} = {0D08E68C-9BEB-475A-B516-969089C9DDB1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {BE6A59CE-8AAB-4FDA-AD86-C8AF278AE035}
