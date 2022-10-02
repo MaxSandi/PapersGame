@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using PapersGame.Backend.Domain;
 using PapersGame.Backend.Providers;
 
 namespace PapersGame.Backend
@@ -12,6 +13,11 @@ namespace PapersGame.Backend
         {
             await client.SendAsync("ReceiveError", errMessage);
         }
+
+        public async Task UserRequestsPlayer()
+        {
+            await Clients.Caller.SendAsync("ReceivePlayer", _gameProvider.Game.GetPlayer(Context.ConnectionId));
+        }
         #endregion
 
         public GameHub()
@@ -22,30 +28,48 @@ namespace PapersGame.Backend
         {
             return base.OnConnectedAsync();
         }
+        public override Task OnDisconnectedAsync(Exception? exception)
+        {
+            return base.OnDisconnectedAsync(exception);
+        }
 
-        public async Task CreateGame(string userName, string gameName, int playerCount)
+        public async Task CreateGame(string gameName, int playerCount)
         {
             try
             {
-                _gameProvider.CreateGame(gameName, playerCount, userName, Context.ConnectionId);
+                _gameProvider.CreateGame(gameName, playerCount, Context.ConnectionId);
+                
+                await Clients.Caller.SendAsync("IGameCreated", _gameProvider.Game);
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
                 await SendError(client, "CreateGame: " + ae.Message);
+                throw;
             }
         }
 
-        public async Task JoinToGame(string userName)
+        public async Task JoinToGame(string userName, string gameId)
         {
             try
             {
                 _gameProvider.JoinToGame(userName, Context.ConnectionId);
+
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    var gameName = game.Name;
+                    await Groups.AddToGroupAsync(Context.ConnectionId, gameName);
+
+                    await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
+                    await Clients.Group(gameName).SendAsync("RecivePlayersList", game.Players);
+                }
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
                 await SendError(client, "JoinToGame: " + ae.Message);
+                throw;
             }
         }
 
@@ -54,11 +78,18 @@ namespace PapersGame.Backend
             try
             {
                 _gameProvider.SetPlayerReady(Context.ConnectionId, characterName);
+
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if(game is not null)
+                {
+                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                }
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
                 await SendError(client, "SetPlayerReady: " + ae.Message);
+                throw;
             }
         }
 
@@ -67,6 +98,12 @@ namespace PapersGame.Backend
             try
             {
                 _gameProvider.SetPlayerUnready(Context.ConnectionId);
+
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                }
             }
             catch (Exception ae)
             {
@@ -80,12 +117,66 @@ namespace PapersGame.Backend
             try
             {
                 _gameProvider.StartGame(Context.ConnectionId);
+
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    await Clients.Group(game.Name).SendAsync("IGameStarted", _gameProvider.Game);
+                }
+
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
-                await SendError(client, "SetPlayerUnready: " + ae.Message);
+                await SendError(client, "StartGame: " + ae.Message);
             }
         }
+
+        public async Task StopGame()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is not null)
+                {
+                    var group = Clients.Group(game.Name);
+                    _gameProvider.StopGame(Context.ConnectionId);
+
+                    await group.SendAsync("IGameStopped");
+                }
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "StartGame: " + ae.Message);
+            }
+        }
+
+        public async Task<bool> CheckPlayerIsAdmin()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is null)
+                    throw new Exception();
+
+                return Context.ConnectionId == game.AdminConnectionId;
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "CheckPlayerIsAdmin: " + ae.Message);
+            }
+
+            return false;
+        }
+
+        #region Private methods
+        private Game? GetGameByConnectionId(string connectionId)
+        {
+            //TODO: use connection id to find game
+            return _gameProvider.Game;
+        }
+        #endregion
     }
 }

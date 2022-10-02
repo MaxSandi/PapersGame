@@ -1,0 +1,6 @@
+.bottom-aligment {
+    display: flex;
+    height: 70vh;
+    justify-content: flex-end;
+    flex-direction: column;
+}

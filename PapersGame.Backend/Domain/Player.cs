@@ -5,37 +5,36 @@
         public string Name { get; }
         public string ConnectionId { get; }
 
-        public bool IsReady => !string.IsNullOrEmpty(ProposeCharacter);
-
+        /// <summary>
+        /// Отгадываемый персонаж
+        /// </summary>
+        public string Character { get; private set; }
         /// <summary>
         /// Загадываемый персонаж
         /// </summary>
         public string ProposeCharacter { get; set; }
-
-        /// <summary>
-        /// Отгадываемый персонаж
-        /// </summary>
-        public string GuessedCharacter { get; private set; }
         /// <summary>
         /// Отгадан ли персонаж?
         /// </summary>
         public bool IsGuessed { get; set; }
+
+        public bool IsReady => !string.IsNullOrEmpty(ProposeCharacter);
 
         public Player(string name, string connectionId)
         {
             Name = name;
             ConnectionId = connectionId;
             ProposeCharacter = string.Empty;
-            GuessedCharacter = string.Empty;
+            Character = string.Empty;
             IsGuessed = false;
         }
 
-        public void SetGuessedCharacter(string character)
+        public void SetCharacter(string character)
         {
-            if (!string.IsNullOrEmpty(GuessedCharacter))
+            if (!string.IsNullOrEmpty(Character))
                 throw new ArgumentException("Player already have character!", Name);
 
-            GuessedCharacter = character;
+            Character = character;
         }
     }
 }

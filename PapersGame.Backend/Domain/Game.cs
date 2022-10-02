@@ -4,29 +4,30 @@ namespace PapersGame.Backend.Domain
 {
     public class Game
     {
+        public string Id { get; } = "111";
+
         public string Name { get; }
         public List<Player> Players { get; }
         /// <summary>
         /// Персонажи, загаданные игроками
         /// </summary>
         public int PlayersLimit { get; private set; }
-        public bool Started { get; private set; }
+        public bool IsStarted { get; private set; }
 
-        public Player Admin { get; private set; }
+        public string AdminConnectionId { get; private set; }
 
         public bool IsReady => Players.Count > 1 && Players.All(p => p.IsReady);
 
-        public Game(string name, int playerLimit, (string name, string connectionId) gameCreator)
+        public Game(string name, int playerLimit, string adminConnectionId)
         {
             if(playerLimit <= 1)
                 throw new ArgumentException("Player count must be greater then 1!");
 
             Name = name;
             PlayersLimit = playerLimit;
+            AdminConnectionId = adminConnectionId;
             Players = new List<Player>();
-            Started = false;
-
-            Admin = AddPlayer(gameCreator.name, gameCreator.connectionId);
+            IsStarted = false;
         }
 
         /// <summary>
@@ -54,7 +55,12 @@ namespace PapersGame.Backend.Domain
         {
             SetCharacterToPlayers();
 
-            Started = true;
+            IsStarted = true;
+        }
+
+        internal void Stop()
+        {
+            IsStarted = false;
         }
 
         internal Player GetPlayer(string connectionId)
@@ -74,7 +80,7 @@ namespace PapersGame.Backend.Domain
             foreach (var player in Players)
             {
                 var item = characters.OrderBy(x => Guid.NewGuid()).Where(x => x.Key != player).First();
-                player.SetGuessedCharacter(item.Value);
+                player.SetCharacter(item.Value);
 
                 characters.Remove(item.Key);
             }
