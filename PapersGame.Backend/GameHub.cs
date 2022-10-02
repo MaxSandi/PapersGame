@@ -171,6 +171,60 @@ namespace PapersGame.Backend
             return false;
         }
 
+        public async Task SetTurnNext()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is null)
+                    throw new Exception();
+
+                var currentPlayerIndex = game.Players.FindIndex(x => x.Equals(game.CurrentPlayer));
+                if (currentPlayerIndex == -1)
+                    throw new Exception("Player not exist!");
+
+                currentPlayerIndex++;
+                if (currentPlayerIndex >= game.Players.Count)
+                    currentPlayerIndex = 0;
+
+                game.CurrentPlayer = game.Players[currentPlayerIndex];
+                await Clients.Group(game.Name).SendAsync("ReciveCurrentPlayer", currentPlayerIndex);
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "SetTurnNext: " + ae.Message);
+            }
+        }
+
+        public async Task<int> SetTurnPrev()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is null)
+                    throw new Exception();
+
+                var currentPlayerIndex = game.Players.FindIndex(x => x.Equals(game.CurrentPlayer));
+                if(currentPlayerIndex == -1)
+                    throw new Exception("Player not exist!");
+
+                currentPlayerIndex--;
+                if(currentPlayerIndex < 0)
+                    currentPlayerIndex = game.Players.Count - 1;
+
+                game.CurrentPlayer = game.Players[currentPlayerIndex];
+                await Clients.Group(game.Name).SendAsync("ReciveCurrentPlayer", game.CurrentPlayer);
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "SetTurnPrev: " + ae.Message);
+            }
+
+            return -1;
+        }
+
         #region Private methods
         private Game? GetGameByConnectionId(string connectionId)
         {
