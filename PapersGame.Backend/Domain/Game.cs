@@ -76,13 +76,34 @@ namespace PapersGame.Backend.Domain
         #region Private methods
         private void SetCharacterToPlayers()
         {
-            var characters = Players.Select(player => (player, player.ProposeCharacter)).ToDictionary(x => x.player, x => x.ProposeCharacter);
+            Random rnd = new Random();
+
+            var characters = Players.Select(player => (player, player.ProposeCharacter))
+                                    .ToDictionary(x => x.player, x => x.ProposeCharacter);
+
+            // For an odd number of Players, there is a case when the last Player doesn't have the appropriate character.
+            if (Players.Count() % 2 != 0)
+            {
+                int randomPosition  = rnd.Next(Players.Count() - 1);
+                var randomElement = characters.ElementAt(randomPosition);
+                Players.Last().SetCharacter(randomElement.Value);
+                characters.Remove(randomElement.Key);
+            }
+            
             foreach (var player in Players)
             {
-                var item = characters.OrderBy(x => Guid.NewGuid()).Where(x => x.Key != player).First();
-                player.SetCharacter(item.Value);
+                if (!string.IsNullOrEmpty(player.Character))
+                {
+                    continue;
+                }
+                
+                var activeCharacters = characters.Where(x => x.Key != player);
 
-                characters.Remove(item.Key);
+                int randomPosition = rnd.Next(activeCharacters.Count());
+                var randomElement = activeCharacters.ElementAt(randomPosition);
+
+                player.SetCharacter(randomElement.Value);
+                characters.Remove(randomElement.Key);
             }
         }
         #endregion
