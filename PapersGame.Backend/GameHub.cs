@@ -62,7 +62,7 @@ namespace PapersGame.Backend
                     await Groups.AddToGroupAsync(Context.ConnectionId, gameName);
 
                     await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
-                    await Clients.Group(gameName).SendAsync("RecivePlayersList", game.Players);
+                    await Clients.Group(gameName).SendAsync("ReceivePlayersList", game.Players);
                 }
             }
             catch (Exception ae)
@@ -82,7 +82,7 @@ namespace PapersGame.Backend
                 var game = GetGameByConnectionId(Context.ConnectionId);
                 if(game is not null)
                 {
-                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                    await Clients.Group(game.Name).SendAsync("ReceivePlayersList", game.Players);
                 }
             }
             catch (Exception ae)
@@ -102,7 +102,7 @@ namespace PapersGame.Backend
                 var game = GetGameByConnectionId(Context.ConnectionId);
                 if (game is not null)
                 {
-                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                    await Clients.Group(game.Name).SendAsync("ReceivePlayersList", game.Players);
                 }
             }
             catch (Exception ae)
@@ -169,6 +169,60 @@ namespace PapersGame.Backend
             }
 
             return false;
+        }
+
+        public async Task SetTurnNext()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is null)
+                    throw new Exception();
+
+                var currentPlayerIndex = game.Players.FindIndex(x => x.Equals(game.CurrentPlayer));
+                if (currentPlayerIndex == -1)
+                    throw new Exception("Player not exist!");
+
+                currentPlayerIndex++;
+                if (currentPlayerIndex >= game.Players.Count)
+                    currentPlayerIndex = 0;
+
+                game.CurrentPlayer = game.Players[currentPlayerIndex];
+                await Clients.Group(game.Name).SendAsync("ReceiveCurrentPlayer", currentPlayerIndex);
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "SetTurnNext: " + ae.Message);
+            }
+        }
+
+        public async Task<int> SetTurnPrev()
+        {
+            try
+            {
+                var game = GetGameByConnectionId(Context.ConnectionId);
+                if (game is null)
+                    throw new Exception();
+
+                var currentPlayerIndex = game.Players.FindIndex(x => x.Equals(game.CurrentPlayer));
+                if(currentPlayerIndex == -1)
+                    throw new Exception("Player not exist!");
+
+                currentPlayerIndex--;
+                if(currentPlayerIndex < 0)
+                    currentPlayerIndex = game.Players.Count - 1;
+
+                game.CurrentPlayer = game.Players[currentPlayerIndex];
+                await Clients.Group(game.Name).SendAsync("ReceiveCurrentPlayer", game.CurrentPlayer);
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "SetTurnPrev: " + ae.Message);
+            }
+
+            return -1;
         }
 
         #region Private methods

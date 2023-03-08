@@ -8,6 +8,7 @@ namespace PapersGame.Backend.Domain
 
         public string Name { get; }
         public List<Player> Players { get; }
+        public Player CurrentPlayer { get; set; }
         /// <summary>
         /// Персонажи, загаданные игроками
         /// </summary>
@@ -53,7 +54,11 @@ namespace PapersGame.Backend.Domain
 
         internal void Start()
         {
+            //TODO: shuffle players
+
             SetCharacterToPlayers();
+
+            CurrentPlayer = Players.First();
 
             IsStarted = true;
         }

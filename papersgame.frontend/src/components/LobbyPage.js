@@ -12,6 +12,7 @@ export default function LobbyPage(props) {
     const currentGame = props.currentGame;
 
     const [players, setPlayers] = useState([]);
+    const [currentPlayer, setCurrentPlayer] = useState(0);
 
     const [characterName, setCharacterName] = useState("");
     const [isPlayerReady, setIsPlayerReady] = useState(false);
@@ -28,14 +29,20 @@ export default function LobbyPage(props) {
 
         connection?.invoke("CheckPlayerIsAdmin").then((res) => { setIsPlayerAdmin(res); });
 
-        connection?.on("RecivePlayersList", p => {
+        connection?.on("ReceivePlayersList", p => {
             setPlayers(p);
-            console.log("GameHub - RecivePlayersList");
+            console.log("GameHub - ReceivePlayersList");
+        });
+
+        connection?.on("ReceiveCurrentPlayer", p => {
+            setCurrentPlayer(p);
+            console.log("GameHub - ReceiveCurrentPlayer");
         });
 
         connection?.on("IGameStarted", game => {
 
             setPlayers(game.players);
+            //setCurrentPlayer(game.player);
 
             setLobbyStatus('running');
 
@@ -79,12 +86,30 @@ export default function LobbyPage(props) {
             currentPlayers.map(
                 (player, index) =>
                     <Col>
-                        <Card>
-                            <Card.Body>
-                                <Card.Title>{player.name}</Card.Title>
-                                <Card.Text>{player.connectionId == connection.connectionId ? " " : player.character}</Card.Text>
-                            </Card.Body>
-                        </Card>
+                        {index == currentPlayer
+                            ?
+                            <Card border="success">
+                                <Card.Body>
+                                    <Card.Title>{player.name}</Card.Title>
+                                    <Card.Text>
+                                        {player.connectionId == connection.connectionId
+                                            ? "?"
+                                            : player.character}
+                                    </Card.Text>
+                                </Card.Body>
+                            </Card>
+                            :
+                            <Card>
+                                <Card.Body>
+                                    <Card.Title>{player.name}</Card.Title>
+                                    <Card.Text>
+                                        {player.connectionId == connection.connectionId
+                                            ? "?"
+                                            : player.character}
+                                    </Card.Text>
+                                </Card.Body>
+                            </Card>
+                        }
                     </Col>);
 
         return (<Row xs={3}>{list}</Row>)
@@ -152,6 +177,28 @@ export default function LobbyPage(props) {
         }
     }
 
+    const setTurnNext = async () => {
+        try {
+
+            await connection.invoke("SetTurnNext");
+            console.log("GameHub - SetTurnNext");
+
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
+    const setTurnPrev = async () => {
+        try {
+
+            await connection.invoke("SetTurnPrev");
+            console.log("GameHub - SetTurnPrev");
+
+        } catch (e) {
+            console.log(e);
+        }
+    }
+
     return (
         <div>
             {!currentGame
@@ -186,7 +233,7 @@ export default function LobbyPage(props) {
                                             }
 
                                             <Row>
-                                                <h2>CHAT!!!</h2>
+                                                <h2>Chat not exist yet :)</h2>
                                             </Row>
                                             <Row className="bottom-aligment">
                                                 <InputGroup className="mb-3">
@@ -223,7 +270,26 @@ export default function LobbyPage(props) {
                                 </Container>,
                             'running':
                                 <Container fluid>
-                                    {playerBoard()}
+                                    <Row>
+                                        {playerBoard()}
+                                    </Row>
+                                    <Row className="bottom-aligment">
+                                        <InputGroup>
+                                            <Button variant="light" className="ml-1" style={{ width: '18rem' }}
+                                                onClick={() => setTurnPrev()}>
+                                                Предыдущий ход
+                                            </Button>
+                                            <Button variant="light" className="ml-1" style={{ width: '18rem' }}
+                                                onClick={() => setTurnNext()}>
+                                                Следующий ход
+                                            </Button>
+                                            <Button variant="danger" className="ml-5"
+                                                onClick={() => stopGame()}>
+                                                Завершить игру
+                                            </Button>
+                                        </InputGroup>
+                                    </Row>
+
                                 </Container>,
                             'complete':
                                 <h3>Game has been completed!</h3>
