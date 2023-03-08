@@ -29,14 +29,14 @@ export default function LobbyPage(props) {
 
         connection?.invoke("CheckPlayerIsAdmin").then((res) => { setIsPlayerAdmin(res); });
 
-        connection?.on("RecivePlayersList", p => {
+        connection?.on("ReceivePlayersList", p => {
             setPlayers(p);
-            console.log("GameHub - RecivePlayersList");
+            console.log("GameHub - ReceivePlayersList");
         });
 
-        connection?.on("ReciveCurrentPlayer", p => {
+        connection?.on("ReceiveCurrentPlayer", p => {
             setCurrentPlayer(p);
-            console.log("GameHub - ReciveCurrentPlayer");
+            console.log("GameHub - ReceiveCurrentPlayer");
         });
 
         connection?.on("IGameStarted", game => {

@@ -62,7 +62,7 @@ namespace PapersGame.Backend
                     await Groups.AddToGroupAsync(Context.ConnectionId, gameName);
 
                     await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
-                    await Clients.Group(gameName).SendAsync("RecivePlayersList", game.Players);
+                    await Clients.Group(gameName).SendAsync("ReceivePlayersList", game.Players);
                 }
             }
             catch (Exception ae)
@@ -82,7 +82,7 @@ namespace PapersGame.Backend
                 var game = GetGameByConnectionId(Context.ConnectionId);
                 if(game is not null)
                 {
-                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                    await Clients.Group(game.Name).SendAsync("ReceivePlayersList", game.Players);
                 }
             }
             catch (Exception ae)
@@ -102,7 +102,7 @@ namespace PapersGame.Backend
                 var game = GetGameByConnectionId(Context.ConnectionId);
                 if (game is not null)
                 {
-                    await Clients.Group(game.Name).SendAsync("RecivePlayersList", game.Players);
+                    await Clients.Group(game.Name).SendAsync("ReceivePlayersList", game.Players);
                 }
             }
             catch (Exception ae)
@@ -188,7 +188,7 @@ namespace PapersGame.Backend
                     currentPlayerIndex = 0;
 
                 game.CurrentPlayer = game.Players[currentPlayerIndex];
-                await Clients.Group(game.Name).SendAsync("ReciveCurrentPlayer", currentPlayerIndex);
+                await Clients.Group(game.Name).SendAsync("ReceiveCurrentPlayer", currentPlayerIndex);
             }
             catch (Exception ae)
             {
@@ -214,7 +214,7 @@ namespace PapersGame.Backend
                     currentPlayerIndex = game.Players.Count - 1;
 
                 game.CurrentPlayer = game.Players[currentPlayerIndex];
-                await Clients.Group(game.Name).SendAsync("ReciveCurrentPlayer", game.CurrentPlayer);
+                await Clients.Group(game.Name).SendAsync("ReceiveCurrentPlayer", game.CurrentPlayer);
             }
             catch (Exception ae)
             {
