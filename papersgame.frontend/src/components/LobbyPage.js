@@ -55,7 +55,20 @@ export default function LobbyPage(props) {
         const currentPlayers = players;
         const list =
             currentPlayers.map(
-                (player, index) => <ListGroupItem>{player.name} {String(player.isReady)}</ListGroupItem>);
+                (player, index) =>
+                    <ListGroupItem>
+                        <div class="d-flex justify-content-between">
+                            {player.name}
+                            {
+                                player.isReady
+                                ?
+                                <div>✔</div>
+                                :
+                                <div />
+                            }
+
+                        </div>
+                    </ListGroupItem>);
 
         return (<ListGroup>{list}</ListGroup>)
     }
