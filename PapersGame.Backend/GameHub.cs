@@ -49,18 +49,19 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task JoinToGame(string userName, string gameId)
+        public async Task JoinGame(string userName, string message)
         {
+            var gameId = message.Split(',')[0];
+            var isReconnect = message.Split(',')[1].Trim() == "true";
             try
             {
-                _gameProvider.JoinToGame(userName, Context.ConnectionId);
+                _gameProvider.JoinGame(userName, Context.ConnectionId, isReconnect);
 
                 var game = GetGameByConnectionId(Context.ConnectionId);
                 if (game is not null)
                 {
                     var gameName = game.Name;
                     await Groups.AddToGroupAsync(Context.ConnectionId, gameName);
-
                     await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
                     await Clients.Group(gameName).SendAsync("ReceivePlayersList", game.Players);
                 }
@@ -68,7 +69,7 @@ namespace PapersGame.Backend
             catch (Exception ae)
             {
                 var client = Clients.Caller;
-                await SendError(client, "JoinToGame: " + ae.Message);
+                await SendError(client, "JoinGame: " + ae.Message);
                 throw;
             }
         }

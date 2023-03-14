@@ -20,6 +20,8 @@
 
         public bool IsReady => !string.IsNullOrEmpty(ProposeCharacter);
 
+        public bool IsOnline { get; set; } = false;
+
         public Player(string name, string connectionId)
         {
             Name = name;

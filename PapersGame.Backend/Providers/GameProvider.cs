@@ -14,15 +14,15 @@ namespace PapersGame.Backend.Providers
             Game = new Game(gameName, playerCount, connectionId);
         }
 
-        public void JoinToGame(string playerName, string connectionId)
+        public void JoinGame(string playerName, string connectionId, bool isReconnect)
         {
             if (Game is null)
                 throw new Exception("Game hasn't been created yet!");
 
-            if (Game.IsStarted)
-                throw new Exception("Can't add player. Game was started!");
+            if (Game.IsStarted && !isReconnect)
+              throw new Exception("Can't add player. Game was started!");
 
-            Game.AddPlayer(playerName, connectionId);
+            Game.AddPlayer(playerName, connectionId, isReconnect);
         }
 
         public void SetPlayerReady(string connectionId, string characterName)

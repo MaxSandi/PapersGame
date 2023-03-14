@@ -37,18 +37,22 @@ namespace PapersGame.Backend.Domain
         /// <param name="userName">Имя игрока</param>
         /// <param name="connectionId">Идентификатор подключения</param>
         /// <returns>Добавленный игрок</returns>
-        internal Player AddPlayer(string userName, string connectionId)
+        internal Player AddPlayer(string userName, string connectionId, bool isReconnect)
         {
             if (PlayersLimit == 0)
                 throw new Exception("Game room is full");
 
             //TODO: временная условность для избежания непоняток с одинаковыми именами
-            if (Players.Exists(x => x.Name == userName))
+            if (!isReconnect && Players.Exists(x => x.Name == userName))
                 throw new ArgumentException("Player with this name already exists", userName);
 
             var player = new Player(userName, connectionId);
-            Players.Add(player);
-            PlayersLimit--;
+            if(!isReconnect)
+            {
+                Players.Add(player);
+                PlayersLimit--;
+            }
+            
             return player;
         }
 
