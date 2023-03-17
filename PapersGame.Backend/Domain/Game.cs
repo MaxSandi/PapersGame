@@ -27,6 +27,7 @@ namespace PapersGame.Backend.Domain
             Name = name;
             PlayersLimit = playerLimit;
             AdminConnectionId = adminConnectionId;
+            Id = adminConnectionId;
             Players = new List<Player>();
             IsStarted = false;
         }
@@ -39,13 +40,17 @@ namespace PapersGame.Backend.Domain
         /// <returns>Добавленный игрок</returns>
         internal Player AddPlayer(string userName, string connectionId, bool isReconnect)
         {
-            if (PlayersLimit == 0)
+            if (PlayersLimit == 0 && !Players.Exists(x => x.Name == userName))
                 throw new Exception("Game room is full");
 
             //TODO: временная условность для избежания непоняток с одинаковыми именами
             if (!isReconnect && Players.Exists(x => x.Name == userName))
                 throw new ArgumentException("Player with this name already exists", userName);
 
+            if (connectionId == Id && Players.Count > 0 && !isReconnect)
+            {
+                connectionId = $"{connectionId}{userName}";
+            }
             var player = new Player(userName, connectionId);
             if(!isReconnect)
             {

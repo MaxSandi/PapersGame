@@ -18,6 +18,7 @@ export default function LobbyPage(props) {
 
     const connection = props.connection;
     const currentGame = props.currentGame;
+    const currentPlayerConnectionId = props.currentPlayerConnectionId;
 
     const [players, setPlayers] = useState([]);
     const [currentPlayer, setCurrentPlayer] = useState(0);
@@ -28,18 +29,32 @@ export default function LobbyPage(props) {
     const [lobbyStatus, setLobbyStatus] = useState("preparing");
 
     useEffect(() => {
+        console.log(currentGame);
         if (currentGame) {
             setPlayers(currentGame.players);
         }
 
         //TODO: get lobby status
 
-        connection?.invoke("CheckPlayerIsAdmin").then((res) => {
-            setIsPlayerAdmin(res);
-        });
+        connection
+            ?.invoke("CheckPlayerIsAdmin", currentPlayerConnectionId)
+            .then((res) => {
+                setIsPlayerAdmin(res);
+            });
 
         connection?.on("ReceivePlayersList", (p) => {
+            console.log(
+                "p.find((p) => p.connectionId == currentPlayerConnectionId)",
+                p.find((p) => p.connectionId == currentPlayerConnectionId)
+            );
+            if (
+                p.find((p) => p.connectionId == currentPlayerConnectionId)
+                    ?.isReady
+            ) {
+                setIsPlayerReady(true);
+            }
             setPlayers(p);
+            console.log("currentPlayerConnectionId", currentPlayerConnectionId);
             console.log("GameHub - ReceivePlayersList");
         });
 
@@ -93,6 +108,7 @@ export default function LobbyPage(props) {
                         <Card.Body>
                             <Card.Title>{player.name}</Card.Title>
                             <Card.Text>
+                                {player.connectionId}
                                 {player.connectionId == connection.connectionId
                                     ? "?"
                                     : player.character}
@@ -104,6 +120,7 @@ export default function LobbyPage(props) {
                         <Card.Body>
                             <Card.Title>{player.name}</Card.Title>
                             <Card.Text>
+                                {player.connectionId}
                                 {player.connectionId == connection.connectionId
                                     ? "?"
                                     : player.character}
@@ -119,7 +136,13 @@ export default function LobbyPage(props) {
 
     const setPlayerReady = async (characterName) => {
         try {
-            await connection.invoke("SetPlayerReady", characterName);
+            console.log("setPlayerReady id", id);
+            console.log(currentPlayerConnectionId);
+            await connection.invoke(
+                "SetPlayerReady",
+                characterName,
+                currentPlayerConnectionId
+            );
             console.log("GameHub - SetPlayerReady");
 
             setIsPlayerReady(true);
@@ -142,7 +165,10 @@ export default function LobbyPage(props) {
 
     const setPlayerUnready = async () => {
         try {
-            await connection.invoke("SetPlayerUnready");
+            await connection.invoke(
+                "SetPlayerUnready",
+                currentPlayerConnectionId
+            );
             console.log("GameHub - SetPlayerUnready");
 
             setIsPlayerReady(false);
@@ -153,7 +179,7 @@ export default function LobbyPage(props) {
 
     const startGame = async () => {
         try {
-            await connection.invoke("StartGame");
+            await connection.invoke("StartGame", currentGame.id);
             console.log("GameHub - StartGame");
         } catch (e) {
             console.log(e);
@@ -226,7 +252,9 @@ export default function LobbyPage(props) {
                                             )}
 
                                             <Row>
-                                                <h2>Chat not exist yet :)</h2>
+                                                <h2>
+                                                    Chat doesn't exist yet :)
+                                                </h2>
                                             </Row>
                                             <Row className="bottom-aligment">
                                                 <InputGroup className="mb-3">

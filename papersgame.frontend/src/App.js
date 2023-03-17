@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-    HubConnectionBuilder,
-    LogLevel,
-} from "@microsoft/signalr";
+import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { Route, Routes, useNavigate } from "react-router-dom";
 import "./App.css";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -17,6 +14,8 @@ const App = () => {
     const [connection, setConnection] = useState();
     const [isConnectionReady, setIsConnectionReady] = useState(false);
     const [currentGame, setCurrentGame] = useState();
+    const [currentPlayerConnectionId, setCurrentPlayerConnectionId] =
+        useState();
     const cookies = new Cookies();
 
     useEffect(() => {
@@ -50,6 +49,11 @@ const App = () => {
             connection.on("IGameJoined", (game) => {
                 console.log(game, "IGameJoined");
                 setCurrentGame(game);
+                setCurrentPlayerConnectionId(
+                    game.players.find(
+                        (p) => p.name == cookies.get("gameConnection").userName
+                    ).connectionId
+                );
                 navigate("/lobby=" + cookies.get("gameConnection").gameId, {
                     replace: true,
                 });
@@ -75,20 +79,27 @@ const App = () => {
 
     const createGame = async (username, gameName, playerCount) => {
         try {
+            connection.on("IGameCreated", async (game) => {
+                console.log("IGameCreated", game);
+
+                await joinGame(username, game.id);
+            });
             await connection.invoke("CreateGame", gameName, playerCount);
             console.log("GameHub - CreateGame");
-
-            await joinGame(username);
         } catch (e) {
             console.log(e);
         }
     };
 
-    const joinGame = async (username) => {
+    const joinGame = async (username, connectionId) => {
         try {
             connection.on("IGameJoined", (game) => {
-                console.log("IGameJoined", game);
+                console.log("IGameJoined game", game);
+                console.log("IGameJoined username", username);
                 setCurrentGame(game);
+                setCurrentPlayerConnectionId(
+                    game.players.find((p) => p.name == username).connectionId
+                );
 
                 cookies.set(
                     "gameConnection",
@@ -101,9 +112,12 @@ const App = () => {
                 );
                 navigate("/lobby=" + game?.id, { replace: true });
             });
-
-            await connection.invoke("JoinGame", username, "111, false");
-            console.log("GameHub - JoinGame");
+            console.log("GameHub - JoinGame connectionId", connectionId);
+            await connection.invoke(
+                "JoinGame",
+                username,
+                connectionId ? `${connectionId}, false` : `, false`
+            );
 
             console.log(cookies.get("gameConnection"));
         } catch (e) {
@@ -125,15 +139,20 @@ const App = () => {
                     path="/game-join"
                     element={<GameJoinPage joinGame={joinGame} />}
                 />
-                <Route
-                    path="/lobby=:id"
-                    element={
-                        <LobbyPage
-                            connection={connection}
-                            currentGame={currentGame}
-                        />
-                    }
-                />
+                {currentGame && connection && currentPlayerConnectionId && (
+                    <Route
+                        path="/lobby=:id"
+                        element={
+                            <LobbyPage
+                                connection={connection}
+                                currentGame={currentGame}
+                                currentPlayerConnectionId={
+                                    currentPlayerConnectionId
+                                }
+                            />
+                        }
+                    />
+                )}
             </Routes>
         </div>
     );

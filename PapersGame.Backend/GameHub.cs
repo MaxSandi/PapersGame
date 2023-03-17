@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using PapersGame.Backend.Domain;
 using PapersGame.Backend.Providers;
+using System.Linq;
 
 namespace PapersGame.Backend
 {
@@ -55,15 +56,21 @@ namespace PapersGame.Backend
             var isReconnect = message.Split(',')[1].Trim() == "true";
             try
             {
-                _gameProvider.JoinGame(userName, Context.ConnectionId, isReconnect);
+                if (string.IsNullOrEmpty(gameId))
+                {
+                    gameId = _gameProvider.Game?.Id;
+                }
 
-                var game = GetGameByConnectionId(Context.ConnectionId);
+                _gameProvider.JoinGame(userName, gameId, isReconnect);
+
+                var game = GetGameByConnectionId(gameId);
                 if (game is not null)
                 {
                     var gameName = game.Name;
-                    await Groups.AddToGroupAsync(Context.ConnectionId, gameName);
+                    await Groups.AddToGroupAsync(gameId, gameName);
                     await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
-                    await Clients.Group(gameName).SendAsync("ReceivePlayersList", game.Players);
+                    //TODO update to Clients.Group(...) to work with reconnect
+                    await Clients.All.SendAsync("ReceivePlayersList", game.Players);
                 }
             }
             catch (Exception ae)
@@ -74,16 +81,16 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task SetPlayerReady(string characterName)
+        public async Task SetPlayerReady(string characterName, string connectionId)
         {
             try
             {
-                _gameProvider.SetPlayerReady(Context.ConnectionId, characterName);
+                _gameProvider.SetPlayerReady(connectionId, characterName);
 
-                var game = GetGameByConnectionId(Context.ConnectionId);
-                if(game is not null)
+                if(_gameProvider.Game is not null)
                 {
-                    await Clients.Group(game.Name).SendAsync("ReceivePlayersList", game.Players);
+                    //TODO update to Clients.Group(...) to work with reconnect
+                    await Clients.All.SendAsync("ReceivePlayersList", _gameProvider.Game.Players);
                 }
             }
             catch (Exception ae)
@@ -94,16 +101,16 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task SetPlayerUnready()
+        public async Task SetPlayerUnready(string connectionId)
         {
             try
             {
-                _gameProvider.SetPlayerUnready(Context.ConnectionId);
+                _gameProvider.SetPlayerUnready(connectionId);
 
-                var game = GetGameByConnectionId(Context.ConnectionId);
-                if (game is not null)
+                if (_gameProvider.Game is not null)
                 {
-                    await Clients.Group(game.Name).SendAsync("ReceivePlayersList", game.Players);
+                    //TODO update to Clients.Group(...) to work with reconnect
+                    await Clients.All.SendAsync("ReceivePlayersList", _gameProvider.Game.Players);
                 }
             }
             catch (Exception ae)
@@ -113,13 +120,13 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task StartGame()
+        public async Task StartGame(string connectionId)
         {
             try
             {
-                _gameProvider.StartGame(Context.ConnectionId);
+                _gameProvider.StartGame(connectionId);
 
-                var game = GetGameByConnectionId(Context.ConnectionId);
+                var game = GetGameByConnectionId(connectionId);
                 if (game is not null)
                 {
                     await Clients.Group(game.Name).SendAsync("IGameStarted", _gameProvider.Game);
@@ -133,15 +140,15 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task StopGame()
+        public async Task StopGame(string connectionId)
         {
             try
             {
-                var game = GetGameByConnectionId(Context.ConnectionId);
+                var game = GetGameByConnectionId(connectionId);
                 if (game is not null)
                 {
                     var group = Clients.Group(game.Name);
-                    _gameProvider.StopGame(Context.ConnectionId);
+                    _gameProvider.StopGame(connectionId);
 
                     await group.SendAsync("IGameStopped");
                 }
@@ -153,15 +160,14 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task<bool> CheckPlayerIsAdmin()
+        public async Task<bool> CheckPlayerIsAdmin(string connectionId)
         {
             try
             {
-                var game = GetGameByConnectionId(Context.ConnectionId);
-                if (game is null)
-                    throw new Exception();
+                connectionId = connectionId ?? Context.ConnectionId;
+                var game = GetGameByConnectionId(connectionId);
 
-                return Context.ConnectionId == game.AdminConnectionId;
+                return connectionId == game?.AdminConnectionId;
             }
             catch (Exception ae)
             {
@@ -229,8 +235,7 @@ namespace PapersGame.Backend
         #region Private methods
         private Game? GetGameByConnectionId(string connectionId)
         {
-            //TODO: use connection id to find game
-            return _gameProvider.Game;
+            return _gameProvider.Game.Id == connectionId ? _gameProvider.Game : null;
         }
         #endregion
     }
