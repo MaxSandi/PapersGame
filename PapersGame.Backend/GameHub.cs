@@ -124,12 +124,12 @@ namespace PapersGame.Backend
         {
             try
             {
+                //Use connectionID to start a game
                 _gameProvider.StartGame(connectionId);
 
-                var game = GetGameByConnectionId(connectionId);
-                if (game is not null)
+                if (_gameProvider.Game is not null)
                 {
-                    await Clients.Group(game.Name).SendAsync("IGameStarted", _gameProvider.Game);
+                    await Clients.All.SendAsync("IGameStarted", _gameProvider.Game);
                 }
 
             }
@@ -144,13 +144,14 @@ namespace PapersGame.Backend
         {
             try
             {
-                var game = GetGameByConnectionId(connectionId);
-                if (game is not null)
+                //TODO: make possible to have many games with different connections
+                if (_gameProvider.Game is not null)
                 {
-                    var group = Clients.Group(game.Name);
+                    //TODO: make possible to have gropus with ganes after reconnects
+                    //var group = Clients.Group(_gameProvider.Game.Name);
                     _gameProvider.StopGame(connectionId);
 
-                    await group.SendAsync("IGameStopped");
+                    await Clients.All.SendAsync("IGameStopped");
                 }
             }
             catch (Exception ae)
@@ -178,11 +179,11 @@ namespace PapersGame.Backend
             return false;
         }
 
-        public async Task SetTurnNext()
+        public async Task SetTurnNext(string connectionId)
         {
             try
             {
-                var game = GetGameByConnectionId(Context.ConnectionId);
+                var game = GetGameByConnectionId(connectionId);
                 if (game is null)
                     throw new Exception();
 
@@ -195,7 +196,7 @@ namespace PapersGame.Backend
                     currentPlayerIndex = 0;
 
                 game.CurrentPlayer = game.Players[currentPlayerIndex];
-                await Clients.Group(game.Name).SendAsync("ReceiveCurrentPlayer", currentPlayerIndex);
+                await Clients.All.SendAsync("ReceiveCurrentPlayer", currentPlayerIndex);
             }
             catch (Exception ae)
             {
@@ -204,11 +205,11 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task<int> SetTurnPrev()
+        public async Task<int> SetTurnPrev(string connectionId)
         {
             try
             {
-                var game = GetGameByConnectionId(Context.ConnectionId);
+                var game = GetGameByConnectionId(connectionId);
                 if (game is null)
                     throw new Exception();
 
@@ -221,7 +222,7 @@ namespace PapersGame.Backend
                     currentPlayerIndex = game.Players.Count - 1;
 
                 game.CurrentPlayer = game.Players[currentPlayerIndex];
-                await Clients.Group(game.Name).SendAsync("ReceiveCurrentPlayer", game.CurrentPlayer);
+                await Clients.All.SendAsync("ReceiveCurrentPlayer", currentPlayerIndex);
             }
             catch (Exception ae)
             {

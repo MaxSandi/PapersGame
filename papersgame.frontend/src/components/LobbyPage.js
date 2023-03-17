@@ -10,7 +10,8 @@ import {
     InputGroup,
 } from "react-bootstrap";
 import { Card } from "react-bootstrap";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
+import Cookies from "universal-cookie";
 import "./LobbyPage.css";
 
 export default function LobbyPage(props) {
@@ -20,6 +21,7 @@ export default function LobbyPage(props) {
     const currentGame = props.currentGame;
     const currentPlayerConnectionId = props.currentPlayerConnectionId;
 
+    const navigate = useNavigate();
     const [players, setPlayers] = useState([]);
     const [currentPlayer, setCurrentPlayer] = useState(0);
 
@@ -27,14 +29,23 @@ export default function LobbyPage(props) {
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [isPlayerAdmin, setIsPlayerAdmin] = useState(false);
     const [lobbyStatus, setLobbyStatus] = useState("preparing");
+    const cookies = new Cookies();
 
     useEffect(() => {
-        console.log(currentGame);
         if (currentGame) {
             setPlayers(currentGame.players);
-        }
 
-        //TODO: get lobby status
+            if (
+                currentGame.players.find((p) => p.connectionId == currentPlayerConnectionId)
+                    ?.isReady
+            ) {
+                setIsPlayerReady(true);
+            }
+
+            if (currentGame.isStarted) {
+                setLobbyStatus("running");
+            }
+        }
 
         connection
             ?.invoke("CheckPlayerIsAdmin", currentPlayerConnectionId)
@@ -43,18 +54,8 @@ export default function LobbyPage(props) {
             });
 
         connection?.on("ReceivePlayersList", (p) => {
-            console.log(
-                "p.find((p) => p.connectionId == currentPlayerConnectionId)",
-                p.find((p) => p.connectionId == currentPlayerConnectionId)
-            );
-            if (
-                p.find((p) => p.connectionId == currentPlayerConnectionId)
-                    ?.isReady
-            ) {
-                setIsPlayerReady(true);
-            }
+            
             setPlayers(p);
-            console.log("currentPlayerConnectionId", currentPlayerConnectionId);
             console.log("GameHub - ReceivePlayersList");
         });
 
@@ -65,16 +66,17 @@ export default function LobbyPage(props) {
 
         connection?.on("IGameStarted", (game) => {
             setPlayers(game.players);
-            //setCurrentPlayer(game.player);
-
             setLobbyStatus("running");
 
             console.log("GameHub - IGameStarted");
         });
 
         connection?.on("IGameStopped", (_) => {
-            setLobbyStatus("complete");
-
+            cookies.remove("gameConnection");
+            props.setCurrentGame(null);
+            navigate("/", {
+                replace: true,
+            });
             console.log("GameHub - IGameStopped");
         });
     }, []);
@@ -108,8 +110,8 @@ export default function LobbyPage(props) {
                         <Card.Body>
                             <Card.Title>{player.name}</Card.Title>
                             <Card.Text>
-                                {player.connectionId}
-                                {player.connectionId == connection.connectionId
+                                {player.connectionId ==
+                                currentPlayerConnectionId
                                     ? "?"
                                     : player.character}
                             </Card.Text>
@@ -120,8 +122,8 @@ export default function LobbyPage(props) {
                         <Card.Body>
                             <Card.Title>{player.name}</Card.Title>
                             <Card.Text>
-                                {player.connectionId}
-                                {player.connectionId == connection.connectionId
+                                {player.connectionId ==
+                                currentPlayerConnectionId
                                     ? "?"
                                     : player.character}
                             </Card.Text>
@@ -188,7 +190,7 @@ export default function LobbyPage(props) {
 
     const stopGame = async () => {
         try {
-            await connection.invoke("StopGame");
+            await connection.invoke("StopGame", currentGame.id);
             console.log("GameHub - StopGame");
         } catch (e) {
             console.log(e);
@@ -197,7 +199,7 @@ export default function LobbyPage(props) {
 
     const setTurnNext = async () => {
         try {
-            await connection.invoke("SetTurnNext");
+            await connection.invoke("SetTurnNext", id);
             console.log("GameHub - SetTurnNext");
         } catch (e) {
             console.log(e);
@@ -206,7 +208,7 @@ export default function LobbyPage(props) {
 
     const setTurnPrev = async () => {
         try {
-            await connection.invoke("SetTurnPrev");
+            await connection.invoke("SetTurnPrev", id);
             console.log("GameHub - SetTurnPrev");
         } catch (e) {
             console.log(e);
@@ -320,36 +322,41 @@ export default function LobbyPage(props) {
                             running: (
                                 <Container fluid>
                                     <Row>{playerBoard()}</Row>
-                                    <Row className="bottom-aligment">
-                                        <InputGroup>
-                                            <Button
-                                                variant="light"
-                                                className="ml-1"
-                                                style={{ width: "18rem" }}
-                                                onClick={() => setTurnPrev()}
-                                            >
-                                                Предыдущий ход
-                                            </Button>
-                                            <Button
-                                                variant="light"
-                                                className="ml-1"
-                                                style={{ width: "18rem" }}
-                                                onClick={() => setTurnNext()}
-                                            >
-                                                Следующий ход
-                                            </Button>
-                                            <Button
-                                                variant="danger"
-                                                className="ml-5"
-                                                onClick={() => stopGame()}
-                                            >
-                                                Завершить игру
-                                            </Button>
-                                        </InputGroup>
-                                    </Row>
+                                    {isPlayerAdmin && (
+                                        <Row className="bottom-aligment">
+                                            <InputGroup>
+                                                <Button
+                                                    variant="light"
+                                                    className="ml-1"
+                                                    style={{ width: "18rem" }}
+                                                    onClick={() =>
+                                                        setTurnPrev()
+                                                    }
+                                                >
+                                                    Предыдущий ход
+                                                </Button>
+                                                <Button
+                                                    variant="light"
+                                                    className="ml-1"
+                                                    style={{ width: "18rem" }}
+                                                    onClick={() =>
+                                                        setTurnNext()
+                                                    }
+                                                >
+                                                    Следующий ход
+                                                </Button>
+                                                <Button
+                                                    variant="danger"
+                                                    className="ml-5"
+                                                    onClick={() => stopGame()}
+                                                >
+                                                    Завершить игру
+                                                </Button>
+                                            </InputGroup>
+                                        </Row>
+                                    )}
                                 </Container>
                             ),
-                            complete: <h3>Game has been completed!</h3>,
                         }[lobbyStatus]
                     }
                 </div>

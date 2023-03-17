@@ -24,11 +24,6 @@ const App = () => {
             .configureLogging(LogLevel.Information)
             .build();
 
-        // connection.onclose(e => {
-        //     setConnection();
-        //     console.log("connection closed!");
-        // });
-
         connection.start().then(() => {
             setIsConnectionReady(true);
             setConnection(connection);
@@ -36,11 +31,6 @@ const App = () => {
     }, []);
 
     useEffect(() => {
-        console.log(
-            connection,
-            isConnectionReady,
-            cookies.get("gameConnection")?.gameId
-        );
         if (
             connection &&
             isConnectionReady &&
@@ -58,16 +48,6 @@ const App = () => {
                     replace: true,
                 });
             });
-            console.log(
-                connection,
-                isConnectionReady,
-                cookies.get("gameConnection")?.gameId,
-                cookies.get("gameConnection").userName
-            );
-            console.log(
-                cookies.get("gameConnection").userName,
-                cookies.get("gameConnection").gameId
-            );
             connection.invoke(
                 "JoinGame",
                 cookies.get("gameConnection").userName,
@@ -94,8 +74,6 @@ const App = () => {
     const joinGame = async (username, connectionId) => {
         try {
             connection.on("IGameJoined", (game) => {
-                console.log("IGameJoined game", game);
-                console.log("IGameJoined username", username);
                 setCurrentGame(game);
                 setCurrentPlayerConnectionId(
                     game.players.find((p) => p.name == username).connectionId
@@ -112,14 +90,12 @@ const App = () => {
                 );
                 navigate("/lobby=" + game?.id, { replace: true });
             });
-            console.log("GameHub - JoinGame connectionId", connectionId);
+
             await connection.invoke(
                 "JoinGame",
                 username,
                 connectionId ? `${connectionId}, false` : `, false`
             );
-
-            console.log(cookies.get("gameConnection"));
         } catch (e) {
             console.log(e);
         }
@@ -149,6 +125,7 @@ const App = () => {
                                 currentPlayerConnectionId={
                                     currentPlayerConnectionId
                                 }
+                                setCurrentGame={setCurrentGame}
                             />
                         }
                     />
