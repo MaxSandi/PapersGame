@@ -19,7 +19,7 @@ export default function LobbyPage(props) {
 
     const connection = props.connection;
     const currentGame = props.currentGame;
-    const currentPlayerConnectionId = props.currentPlayerConnectionId;
+    const currentPlayerId = props.currentPlayerId;
 
     const navigate = useNavigate();
     const [players, setPlayers] = useState([]);
@@ -36,7 +36,7 @@ export default function LobbyPage(props) {
             setPlayers(currentGame.players);
 
             if (
-                currentGame.players.find((p) => p.connectionId == currentPlayerConnectionId)
+                currentGame.players.find((p) => p.id == currentPlayerId)
                     ?.isReady
             ) {
                 setIsPlayerReady(true);
@@ -48,7 +48,7 @@ export default function LobbyPage(props) {
         }
 
         connection
-            ?.invoke("CheckPlayerIsAdmin", currentPlayerConnectionId)
+            ?.invoke("CheckPlayerIsAdmin")
             .then((res) => {
                 setIsPlayerAdmin(res);
             });
@@ -110,8 +110,8 @@ export default function LobbyPage(props) {
                         <Card.Body>
                             <Card.Title>{player.name}</Card.Title>
                             <Card.Text>
-                                {player.connectionId ==
-                                currentPlayerConnectionId
+                                {player.id ==
+                                currentPlayerId
                                     ? "?"
                                     : player.character}
                             </Card.Text>
@@ -122,8 +122,8 @@ export default function LobbyPage(props) {
                         <Card.Body>
                             <Card.Title>{player.name}</Card.Title>
                             <Card.Text>
-                                {player.connectionId ==
-                                currentPlayerConnectionId
+                                    {player.id ==
+                                currentPlayerId
                                     ? "?"
                                     : player.character}
                             </Card.Text>
@@ -139,11 +139,10 @@ export default function LobbyPage(props) {
     const setPlayerReady = async (characterName) => {
         try {
             console.log("setPlayerReady id", id);
-            console.log(currentPlayerConnectionId);
+            console.log(currentPlayerId);
             await connection.invoke(
                 "SetPlayerReady",
-                characterName,
-                currentPlayerConnectionId
+                characterName
             );
             console.log("GameHub - SetPlayerReady");
 
@@ -168,8 +167,7 @@ export default function LobbyPage(props) {
     const setPlayerUnready = async () => {
         try {
             await connection.invoke(
-                "SetPlayerUnready",
-                currentPlayerConnectionId
+                "SetPlayerUnready"
             );
             console.log("GameHub - SetPlayerUnready");
 
@@ -199,17 +197,17 @@ export default function LobbyPage(props) {
 
     const setTurnNext = async () => {
         try {
-            await connection.invoke("SetTurnNext", id);
+            await connection.invoke("SetTurnNext");
             console.log("GameHub - SetTurnNext");
         } catch (e) {
             console.log(e);
         }
     };
 
-    const setTurnPrev = async () => {
+    const SetTurnPrevious = async () => {
         try {
-            await connection.invoke("SetTurnPrev", id);
-            console.log("GameHub - SetTurnPrev");
+            await connection.invoke("SetTurnPrevious");
+            console.log("GameHub - SetTurnPrevious");
         } catch (e) {
             console.log(e);
         }
@@ -330,7 +328,7 @@ export default function LobbyPage(props) {
                                                     className="ml-1"
                                                     style={{ width: "18rem" }}
                                                     onClick={() =>
-                                                        setTurnPrev()
+                                                        SetTurnPrevious()
                                                     }
                                                 >
                                                     Предыдущий ход
@@ -348,7 +346,9 @@ export default function LobbyPage(props) {
                                                 <Button
                                                     variant="danger"
                                                     className="ml-5"
-                                                    onClick={() => stopGame()}
+                                                    onClick={() =>
+                                                        stopGame()
+                                                    }
                                                 >
                                                     Завершить игру
                                                 </Button>
