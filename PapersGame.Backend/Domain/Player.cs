@@ -2,8 +2,8 @@
 {
     public class Player
     {
+        public string Id { get; }
         public string Name { get; }
-        public string ConnectionId { get; }
 
         /// <summary>
         /// Отгадываемый персонаж
@@ -20,10 +20,11 @@
 
         public bool IsReady => !string.IsNullOrEmpty(ProposeCharacter);
 
-        public Player(string name, string connectionId)
+        public Player(string name)
         {
+            Id = Guid.NewGuid().ToString();
+
             Name = name;
-            ConnectionId = connectionId;
             ProposeCharacter = string.Empty;
             Character = string.Empty;
             IsGuessed = false;

@@ -4,7 +4,7 @@ namespace PapersGame.Backend.Domain
 {
     public class Game
     {
-        public string Id { get; } = "111";
+        public string Id { get; }
 
         public string Name { get; }
         public List<Player> Players { get; }
@@ -15,18 +15,18 @@ namespace PapersGame.Backend.Domain
         public int PlayersLimit { get; private set; }
         public bool IsStarted { get; private set; }
 
-        public string AdminConnectionId { get; private set; }
+        public string AdminId { get; private set; }
 
         public bool IsReady => Players.Count > 1 && Players.All(p => p.IsReady);
 
-        public Game(string name, int playerLimit, string adminConnectionId)
+        public Game(string name, int playerLimit)
         {
             if(playerLimit <= 1)
                 throw new ArgumentException("Player count must be greater then 1!");
 
+            Id = Guid.NewGuid().ToString();
             Name = name;
             PlayersLimit = playerLimit;
-            AdminConnectionId = adminConnectionId;
             Players = new List<Player>();
             IsStarted = false;
         }
@@ -35,23 +35,30 @@ namespace PapersGame.Backend.Domain
         /// Добавить игрока к игре
         /// </summary>
         /// <param name="userName">Имя игрока</param>
-        /// <param name="connectionId">Идентификатор подключения</param>
         /// <returns>Добавленный игрок</returns>
-        internal Player AddPlayer(string userName, string connectionId)
+        internal Player AddPlayer(string userName)
         {
-            if (PlayersLimit == 0)
+            if (PlayersLimit == 0 && !Players.Exists(x => x.Name == userName))
                 throw new Exception("Game room is full");
 
             //TODO: временная условность для избежания непоняток с одинаковыми именами
             if (Players.Exists(x => x.Name == userName))
                 throw new ArgumentException("Player with this name already exists", userName);
 
-            var player = new Player(userName, connectionId);
+            // первый добавленный игрок является админом
+            var player = new Player(userName);
+            if (!Players.Any())
+                AdminId = player.Id;
+
             Players.Add(player);
             PlayersLimit--;
+            
             return player;
         }
 
+        /// <summary>
+        /// Запустить игру
+        /// </summary>
         internal void Start()
         {
             //TODO: shuffle players
@@ -63,19 +70,58 @@ namespace PapersGame.Backend.Domain
             IsStarted = true;
         }
 
+        /// <summary>
+        /// Остановить игру
+        /// </summary>
         internal void Stop()
         {
             IsStarted = false;
         }
 
-        internal Player GetPlayer(string connectionId)
+        /// <summary>
+        /// Передать ход следующему игроку
+        /// </summary>
+        /// <returns>Номер текущего игрока</returns>
+        internal int SetTurnNext()
         {
-            return Players.First(x => x.ConnectionId == connectionId);
+            var currentPlayerIndex = Players.FindIndex(x => x.Equals(CurrentPlayer));
+            if (currentPlayerIndex == -1)
+                throw new Exception("Player not exist!");
+
+            currentPlayerIndex++;
+            if (currentPlayerIndex >= Players.Count)
+                currentPlayerIndex = 0;
+
+            CurrentPlayer = Players[currentPlayerIndex];
+            return currentPlayerIndex;
         }
 
-        internal bool IsPlayerReady(string connectionId)
+        /// <summary>
+        /// Передать ход предыдущему игроку
+        /// </summary>
+        /// <returns>Номер текущего игрока</returns>
+        internal int SetTurnPrevious()
         {
-            return Players.First(x => x.ConnectionId == connectionId).IsReady;
+            var currentPlayerIndex = Players.FindIndex(x => x.Equals(CurrentPlayer));
+            if (currentPlayerIndex == -1)
+                throw new Exception("Player not exist!");
+
+            currentPlayerIndex--;
+            if (currentPlayerIndex < 0)
+                currentPlayerIndex = Players.Count - 1;
+
+            CurrentPlayer = Players[currentPlayerIndex];
+            return currentPlayerIndex;
+        }
+
+        internal Player GetPlayer(string playerId)
+        {
+            return Players.Single(x => x.Id == playerId);
+        }
+
+        internal bool IsPlayerReady(string playerId)
+        {
+            return Players.Single(x => x.Id == playerId).IsReady;
         }
 
         #region Private methods

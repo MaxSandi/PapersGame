@@ -1,15 +1,19 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import 'mdb-react-ui-kit/dist/css/mdb.min.css'
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-import { BrowserRouter } from 'react-router-dom';
+import React from "react";
+import "mdb-react-ui-kit/dist/css/mdb.min.css";
+import App from "./App";
+import reportWebVitals from "./reportWebVitals";
+import { BrowserRouter } from "react-router-dom";
+import { createRoot } from "react-dom/client";
 
-ReactDOM.render(
-    <BrowserRouter basename={document.getElementsByTagName('base')[0].getAttribute('href')}>
+const container = document.getElementById("root");
+const root = createRoot(container);
+
+root.render(
+    <BrowserRouter
+        basename={document.getElementsByTagName("base")[0].getAttribute("href")}
+    >
         <App />
-    </BrowserRouter>,
-    document.getElementById('root')
+    </BrowserRouter>
 );
 
 // If you want to start measuring performance in your app, pass a function

@@ -11,17 +11,27 @@ export default function GameJoinPage(props) {
                     <Form>
                         <Form.Group controlId="formGameName">
                             <Form.Label>Имя игрока</Form.Label>
-                            <Form.Control name="playerName" type="text" placeholder=""
-                                value={playerName} onChange={(event) => setPlayerName(event.target.value)} />
+                            <Form.Control
+                                name="playerName"
+                                type="text"
+                                placeholder=""
+                                value={playerName}
+                                onChange={(event) =>
+                                    setPlayerName(event.target.value)
+                                }
+                            />
                         </Form.Group>
 
-                        <Button variant="primary" className="mt-1" onClick={() => props.joinGame(playerName)}>
-                            Join to game
+                        <Button
+                            variant="primary"
+                            className="mt-1"
+                            onClick={() => props.joinGame(playerName)}
+                        >
+                            Join game
                         </Button>
                     </Form>
                 </Col>
             </Row>
-
         </Container>
-    )
+    );
 }
