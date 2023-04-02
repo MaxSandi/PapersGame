@@ -14,7 +14,7 @@ const App = () => {
     const [connection, setConnection] = useState();
     const [isConnectionReady, setIsConnectionReady] = useState(false);
     const [currentGame, setCurrentGame] = useState();
-    const [currentPlayerConnectionId, setCurrentPlayerConnectionId] =
+    const [currentPlayerId, setCurrentPlayerId] =
         useState();
     const cookies = new Cookies();
 
@@ -34,26 +34,32 @@ const App = () => {
         if (
             connection &&
             isConnectionReady &&
-            cookies.get("gameConnection")?.gameId
+            cookies.get("gameConnectionInfo")?.gameId
         ) {
-            connection.on("IGameJoined", (game) => {
-                console.log(game, "IGameJoined");
-                setCurrentGame(game);
-                setCurrentPlayerConnectionId(
-                    game.players.find(
-                        (p) => p.name == cookies.get("gameConnection").userName
-                    ).connectionId
-                );
-                navigate("/lobby=" + cookies.get("gameConnection").gameId, {
-                    replace: true,
+            connection?.invoke(
+                "CanReconnectGame",
+                cookies.get("gameConnectionInfo").gameId,
+                cookies.get("gameConnectionInfo").playerId)
+                .then((res) => {
+                    if (res) {
+                        connection.on("IGameReconnected", (game) => {
+                            console.log(game, "IGameReconnected");
+                            setCurrentGame(game);
+                            setCurrentPlayerId(cookies.get("gameConnectionInfo").playerId);
+                            navigate("/lobby=" + cookies.get("gameConnectionInfo").gameId, {
+                                replace: true,
+                            });
+                        });
+
+                        connection.invoke(
+                            "ReconnectGame",
+                            cookies.get("gameConnectionInfo").gameId,
+                            cookies.get("gameConnectionInfo").playerId
+                        );
+                        console.log(cookies.get("gameConnectionInfo")?.gameId, "Reconnect game");
+                    }
                 });
-            });
-            connection.invoke(
-                "JoinGame",
-                cookies.get("gameConnection").userName,
-                `${cookies.get("gameConnection").gameId}, true`
-            );
-            console.log(cookies.get("gameConnection")?.gameId, "Join game");
+
         }
     }, [connection]);
 
@@ -71,20 +77,17 @@ const App = () => {
         }
     };
 
-    const joinGame = async (username, connectionId) => {
+    const joinGame = async (username) => {
         try {
-            connection.on("IGameJoined", (game) => {
+            connection.on("IGameJoined", (game, player) => {
                 setCurrentGame(game);
-                setCurrentPlayerConnectionId(
-                    game.players.find((p) => p.name == username).connectionId
-                );
+                setCurrentPlayerId(player.id);
 
                 cookies.set(
-                    "gameConnection",
+                    "gameConnectionInfo",
                     {
-                        userName: username,
                         gameId: game?.id,
-                        connectionId: game?.connectionId,
+                        playerId: player?.id,
                     },
                     { path: "/" }
                 );
@@ -93,8 +96,8 @@ const App = () => {
 
             await connection.invoke(
                 "JoinGame",
-                username,
-                connectionId ? `${connectionId}, false` : `, false`
+                "",//TODO: replace to game id
+                username
             );
         } catch (e) {
             console.log(e);
@@ -115,15 +118,15 @@ const App = () => {
                     path="/game-join"
                     element={<GameJoinPage joinGame={joinGame} />}
                 />
-                {currentGame && connection && currentPlayerConnectionId && (
+                {currentGame && connection && currentPlayerId && (
                     <Route
                         path="/lobby=:id"
                         element={
                             <LobbyPage
                                 connection={connection}
                                 currentGame={currentGame}
-                                currentPlayerConnectionId={
-                                    currentPlayerConnectionId
+                                currentPlayerId={
+                                    currentPlayerId
                                 }
                                 setCurrentGame={setCurrentGame}
                             />

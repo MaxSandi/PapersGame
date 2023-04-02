@@ -9,6 +9,8 @@ namespace PapersGame.Backend
     {
         private static readonly GameProvider _gameProvider = new GameProvider();
 
+        private static readonly Dictionary<string, (Game game, Player player)> _connectionProvider = new Dictionary<string, (Game game, Player player)>();
+
         #region Messages
         public async Task SendError(IClientProxy client, string errMessage)
         {
@@ -17,8 +19,53 @@ namespace PapersGame.Backend
 
         public async Task UserRequestsPlayer()
         {
-            await Clients.Caller.SendAsync("ReceivePlayer", _gameProvider.Game.GetPlayer(Context.ConnectionId));
+            if(_connectionProvider.TryGetValue(Context.ConnectionId, out var connectionInfo))
+            {
+                await Clients.Caller.SendAsync("ReceivePlayer", connectionInfo.player);
+            }
         }
+
+        public async Task GroupRequestsPlayerList()
+        {
+            if (_connectionProvider.TryGetValue(Context.ConnectionId, out var connectionInfo))
+            {
+                var gameGroup = GetGameGroup(connectionInfo.game.Id);
+                if(gameGroup is not null)
+                    await gameGroup.SendAsync("ReceivePlayersList", connectionInfo.game.Players);
+            }
+        }
+
+        public async Task GroupRequestsGameStarted()
+        {
+            if (_connectionProvider.TryGetValue(Context.ConnectionId, out var connectionInfo))
+            {
+                var gameGroup = GetGameGroup(connectionInfo.game.Id);
+                if (gameGroup is not null)
+                    await gameGroup.SendAsync("IGameStarted", connectionInfo.game);
+            }
+        }
+
+        public async Task GroupRequestsGameStopped(string gameId)
+        {
+            if (_connectionProvider.TryGetValue(Context.ConnectionId, out var connectionInfo))
+            {
+                await Clients.Group(gameId).SendAsync("IGameStopped");
+            }
+        }
+
+        public async Task GroupRequestsCurrentPlayerIndex()
+        {
+            if (_connectionProvider.TryGetValue(Context.ConnectionId, out var connectionInfo))
+            {
+                var game = connectionInfo.game;
+                var playerIndex = game.Players.FindIndex(x => x.Equals(game.CurrentPlayer));
+
+                var gameGroup = GetGameGroup(connectionInfo.game.Id);
+                if (gameGroup is not null)
+                    await gameGroup.SendAsync("ReceiveCurrentPlayer", playerIndex);
+            }
+        }
+
         #endregion
 
         public GameHub()
@@ -29,16 +76,18 @@ namespace PapersGame.Backend
         {
             return base.OnConnectedAsync();
         }
-        public override Task OnDisconnectedAsync(Exception? exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            return base.OnDisconnectedAsync(exception);
+            await RemoveConnectionInfoAsync();
+
+            await base.OnDisconnectedAsync(exception);
         }
 
         public async Task CreateGame(string gameName, int playerCount)
         {
             try
             {
-                _gameProvider.CreateGame(gameName, playerCount, Context.ConnectionId);
+                _gameProvider.CreateGame(gameName, playerCount);
                 
                 await Clients.Caller.SendAsync("IGameCreated", _gameProvider.Game);
             }
@@ -50,28 +99,20 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task JoinGame(string userName, string message)
+        public async Task JoinGame(string gameId, string userName)
         {
-            var gameId = message.Split(',')[0];
-            var isReconnect = message.Split(',')[1].Trim() == "true";
             try
             {
-                if (string.IsNullOrEmpty(gameId))
-                {
-                    gameId = _gameProvider.Game?.Id;
-                }
+                //TODO: временно, пока не реализован выбор игры
+                gameId = string.IsNullOrEmpty(gameId) ? _gameProvider.Game?.Id : gameId;
 
-                _gameProvider.JoinGame(userName, gameId, isReconnect);
+                var game = GetGame(gameId);
+                var player = _gameProvider.JoinGame(gameId, userName);
 
-                var game = GetGameByConnectionId(gameId);
-                if (game is not null)
-                {
-                    var gameName = game.Name;
-                    await Groups.AddToGroupAsync(gameId, gameName);
-                    await Clients.Caller.SendAsync("IGameJoined", _gameProvider.Game);
-                    //TODO update to Clients.Group(...) to work with reconnect
-                    await Clients.All.SendAsync("ReceivePlayersList", game.Players);
-                }
+                await AddConnectionInfoAsync(game, player);
+                await Clients.Caller.SendAsync("IGameJoined", game, player);
+
+                await GroupRequestsPlayerList();
             }
             catch (Exception ae)
             {
@@ -81,17 +122,59 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task SetPlayerReady(string characterName, string connectionId)
+        public async Task ReconnectGame(string gameId, string playerId)
         {
             try
             {
-                _gameProvider.SetPlayerReady(connectionId, characterName);
+                var game = GetGame(gameId);
 
-                if(_gameProvider.Game is not null)
-                {
-                    //TODO update to Clients.Group(...) to work with reconnect
-                    await Clients.All.SendAsync("ReceivePlayersList", _gameProvider.Game.Players);
-                }
+                var player = game.GetPlayer(playerId);
+                if (player is null)
+                    throw new Exception($"Player {playerId} not found in game {gameId}");
+
+                await AddConnectionInfoAsync(game, player);
+                await Clients.Caller.SendAsync("IGameReconnected", game);
+
+                await GroupRequestsPlayerList();
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "ReconnectGame: " + ae.Message);
+                throw;
+            }
+        }
+
+        public async Task<bool> CanReconnectGame(string gameId, string playerId)
+        {
+            try
+            {
+                var game = GetGame(gameId);
+                var player = game?.GetPlayer(playerId);
+
+                return game is not null && player is not null;
+            }
+            catch (Exception ae)
+            {
+                var client = Clients.Caller;
+                await SendError(client, "CanReconnectGame: " + ae.Message);
+                throw;
+            }
+        }
+
+        public async Task SetPlayerReady(string characterName)
+        {
+            try
+            {
+                var game = GetGameByConnectionId();
+                if (game is null)
+                    throw new Exception($"$Can't found game by connection!");
+                var player = GetPlayerByConnectionId();
+                if (player is null)
+                    throw new Exception($"$Can't found player by connection!");
+
+                _gameProvider.SetPlayerReady(game.Id, player.Id, characterName);
+                await GroupRequestsPlayerList();
             }
             catch (Exception ae)
             {
@@ -101,17 +184,19 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task SetPlayerUnready(string connectionId)
+        public async Task SetPlayerUnready()
         {
             try
             {
-                _gameProvider.SetPlayerUnready(connectionId);
+                var game = GetGameByConnectionId();
+                if (game is null)
+                    throw new Exception($"$Can't found game by connection!");
+                var player = GetPlayerByConnectionId();
+                if (player is null)
+                    throw new Exception($"$Can't found player by connection!");
 
-                if (_gameProvider.Game is not null)
-                {
-                    //TODO update to Clients.Group(...) to work with reconnect
-                    await Clients.All.SendAsync("ReceivePlayersList", _gameProvider.Game.Players);
-                }
+                _gameProvider.SetPlayerUnready(game.Id, player.Id);
+                await GroupRequestsPlayerList();
             }
             catch (Exception ae)
             {
@@ -120,18 +205,16 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task StartGame(string connectionId)
+        public async Task StartGame(string gameId)
         {
             try
             {
-                //Use connectionID to start a game
-                _gameProvider.StartGame(connectionId);
+                var player = GetPlayerByConnectionId();
+                if (player is null)
+                    throw new Exception($"$Can't found player by connection!");
 
-                if (_gameProvider.Game is not null)
-                {
-                    await Clients.All.SendAsync("IGameStarted", _gameProvider.Game);
-                }
-
+                _gameProvider.StartGame(gameId, player.Id);
+                await GroupRequestsGameStarted();
             }
             catch (Exception ae)
             {
@@ -140,35 +223,36 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task StopGame(string connectionId)
+        public async Task StopGame(string gameId)
         {
             try
             {
-                //TODO: make possible to have many games with different connections
-                if (_gameProvider.Game is not null)
-                {
-                    //TODO: make possible to have gropus with ganes after reconnects
-                    //var group = Clients.Group(_gameProvider.Game.Name);
-                    _gameProvider.StopGame(connectionId);
+                var player = GetPlayerByConnectionId();
+                if (player is null)
+                    throw new Exception($"$Can't found player by connection!");
 
-                    await Clients.All.SendAsync("IGameStopped");
-                }
+                _gameProvider.StopGame(gameId, player.Id);
+                await GroupRequestsGameStopped(gameId);
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
-                await SendError(client, "StartGame: " + ae.Message);
+                await SendError(client, "StopGame: " + ae.Message);
             }
         }
 
-        public async Task<bool> CheckPlayerIsAdmin(string connectionId)
+        public async Task<bool> CheckPlayerIsAdmin()
         {
             try
             {
-                connectionId = connectionId ?? Context.ConnectionId;
-                var game = GetGameByConnectionId(connectionId);
+                var game = GetGameByConnectionId();
+                if (game is null)
+                    throw new Exception($"$Can't found game by connection!");
+                var player = GetPlayerByConnectionId();
+                if (player is null)
+                    throw new Exception($"$Can't found player by connection!");
 
-                return connectionId == game?.AdminConnectionId;
+                return player.Id == game.AdminId;
             }
             catch (Exception ae)
             {
@@ -179,24 +263,16 @@ namespace PapersGame.Backend
             return false;
         }
 
-        public async Task SetTurnNext(string connectionId)
+        public async Task SetTurnNext()
         {
             try
             {
-                var game = GetGameByConnectionId(connectionId);
+                var game = GetGameByConnectionId();
                 if (game is null)
                     throw new Exception();
 
-                var currentPlayerIndex = game.Players.FindIndex(x => x.Equals(game.CurrentPlayer));
-                if (currentPlayerIndex == -1)
-                    throw new Exception("Player not exist!");
-
-                currentPlayerIndex++;
-                if (currentPlayerIndex >= game.Players.Count)
-                    currentPlayerIndex = 0;
-
-                game.CurrentPlayer = game.Players[currentPlayerIndex];
-                await Clients.All.SendAsync("ReceiveCurrentPlayer", currentPlayerIndex);
+                game.SetTurnNext();
+                await GroupRequestsCurrentPlayerIndex();
             }
             catch (Exception ae)
             {
@@ -205,38 +281,81 @@ namespace PapersGame.Backend
             }
         }
 
-        public async Task<int> SetTurnPrev(string connectionId)
+        public async Task<int> SetTurnPrevious()
         {
             try
             {
-                var game = GetGameByConnectionId(connectionId);
+                var game = GetGameByConnectionId();
                 if (game is null)
                     throw new Exception();
 
-                var currentPlayerIndex = game.Players.FindIndex(x => x.Equals(game.CurrentPlayer));
-                if(currentPlayerIndex == -1)
-                    throw new Exception("Player not exist!");
-
-                currentPlayerIndex--;
-                if(currentPlayerIndex < 0)
-                    currentPlayerIndex = game.Players.Count - 1;
-
-                game.CurrentPlayer = game.Players[currentPlayerIndex];
-                await Clients.All.SendAsync("ReceiveCurrentPlayer", currentPlayerIndex);
+                game.SetTurnPrevious();
+                await GroupRequestsCurrentPlayerIndex();
             }
             catch (Exception ae)
             {
                 var client = Clients.Caller;
-                await SendError(client, "SetTurnPrev: " + ae.Message);
+                await SendError(client, "SetTurnPrevious: " + ae.Message);
             }
 
             return -1;
         }
 
-        #region Private methods
-        private Game? GetGameByConnectionId(string connectionId)
+        #region Connection provider
+        private async Task AddConnectionInfoAsync(Game game, Player player)
         {
-            return _gameProvider.Game.Id == connectionId ? _gameProvider.Game : null;
+            if (_connectionProvider.ContainsKey(Context.ConnectionId))
+                await RemoveConnectionInfoAsync();
+
+            _connectionProvider.Add(Context.ConnectionId, new(game, player));
+            await Groups.AddToGroupAsync(Context.ConnectionId, game.Id);
+        }
+
+        private async Task RemoveConnectionInfoAsync()
+        {
+            if (_connectionProvider.TryGetValue(Context.ConnectionId, out var connectionInfo))
+            {
+                await Groups.RemoveFromGroupAsync(Context.ConnectionId, connectionInfo.game.Id);
+
+                _connectionProvider.Remove(Context.ConnectionId);
+            }
+        }
+        #endregion
+
+        #region Private methods
+        private Game? GetGame(string gameId) 
+        {
+            if (_gameProvider.Game is null || _gameProvider.Game.Id != gameId)
+                return null;
+
+            return _gameProvider.Game;
+        }
+
+        private IClientProxy? GetGameGroup(string gameId)
+        {
+            var game = GetGame(gameId);
+            if (game is null)
+                return null;
+
+            return Clients.Group(game.Id);
+        }
+
+        private Game? GetGameByConnectionId(string? connectionId = null)
+        {
+            connectionId = string.IsNullOrEmpty(connectionId) ? Context.ConnectionId : connectionId;
+            if (!_connectionProvider.TryGetValue(connectionId, out var connectionInfo))
+                return null;
+
+            return connectionInfo.game;
+        }
+
+        private Player? GetPlayerByConnectionId(string? connectionId = null)
+        {
+            connectionId = string.IsNullOrEmpty(connectionId) ? Context.ConnectionId : connectionId;
+            if (!_connectionProvider.TryGetValue(connectionId, out var connectionInfo))
+                return null;
+
+            return connectionInfo.player;
         }
         #endregion
     }
