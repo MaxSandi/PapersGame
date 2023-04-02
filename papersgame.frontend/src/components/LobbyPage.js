@@ -204,7 +204,7 @@ export default function LobbyPage(props) {
         }
     };
 
-    const SetTurnPrevious = async () => {
+    const setTurnPrevious = async () => {
         try {
             await connection.invoke("SetTurnPrevious");
             console.log("GameHub - SetTurnPrevious");
@@ -328,7 +328,7 @@ export default function LobbyPage(props) {
                                                     className="ml-1"
                                                     style={{ width: "18rem" }}
                                                     onClick={() =>
-                                                        SetTurnPrevious()
+                                                        setTurnPrevious()
                                                     }
                                                 >
                                                     Предыдущий ход
